@@ -1,4 +1,10 @@
+"""
+This file is used to package the project and install it in the system.
+"""
 from setuptools import setup, find_packages
+
+with open('README.md', 'r', encoding='utf-8') as fh:
+    long_description = fh.read()
 
 setup(
     name='bitcoin_trading',
@@ -18,7 +24,7 @@ setup(
     author='Arturo Gonzalez M.',
     author_email='arturo@arturosolutions.com.au',
     description='A project to process real-time cryptocurrency data from Binance using WebSocket API.',
-    long_description=open('README.md').read(),
+    long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/arturogonzalezm/bitcoin_trading',
     classifiers=[
@@ -36,4 +42,3 @@ setup(
     ],
     python_requires='>=3.7',
 )
-

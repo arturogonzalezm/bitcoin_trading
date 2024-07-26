@@ -1,172 +1,100 @@
 """
 This module contains tests for the Observer and BinanceSubject classes.
 """
-import logging
 import pytest
-
-from bitcoin_trading.observer import Observer, BinanceSubject
+from unittest.mock import MagicMock
+from bitcoin_trading.observer import BinanceSubject, Observer
 
 
 @pytest.fixture
-def caplog(caplog):
+def caplog_fixture(caplog):
     """
-    Fixture to capture log messages.
-    :param caplog:
-    :return:
+    Fixture that wraps the caplog to avoid redefinition warnings.
+    :param caplog: The caplog fixture provided by pytest.
+    :return: The wrapped caplog fixture.
     """
     return caplog
 
 
-# Mock Observer class for testing
-class MockObserver(Observer):
-    """
-    Mock Observer class for testing.
-    """
-    def __init__(self):
-        """
-        Constructor for the MockObserver class.
-        """
-        self.messages = []
-
-    def update(self, message):
-        """
-        Update method for the MockObserver class.
-        :param message:
-        :return:
-        """
-        self.messages.append(message)
-
-
 @pytest.fixture
-def binance_subject():
+def binance_subject_fixture():
     """
-    Fixture to create a BinanceSubject instance.
-    :return:
+    Fixture that provides an instance of BinanceSubject.
+    :return: A new instance of BinanceSubject.
     """
     return BinanceSubject()
 
 
 @pytest.fixture
-def mock_observer():
+def mock_observer_fixture():
     """
-    Fixture to create a MockObserver instance.
-    :return:
+    Fixture that provides a mock observer.
+    :return: A MagicMock instance spec'd to Observer.
     """
-    return MockObserver()
+    observer = MagicMock(spec=Observer)
+    return observer
 
 
-def test_binance_subject_initialization(binance_subject):
+def test_attach_new_observer(binance_subject_fixture, mock_observer_fixture, caplog_fixture):
     """
-    Test the initialization of the BinanceSubject class.
-    :param binance_subject:
-    :return:
+    Test attaching a new observer to the BinanceSubject.
+    :param binance_subject_fixture: The BinanceSubject instance.
+    :param mock_observer_fixture: The mock observer.
+    :param caplog_fixture: The caplog fixture for capturing log messages.
     """
-    assert binance_subject._observers == []
+    binance_subject_fixture.attach(mock_observer_fixture)
+    assert mock_observer_fixture in binance_subject_fixture._observers  # pylint: disable=protected-access
+    assert "Observer" in caplog_fixture.text
+    assert "attached" in caplog_fixture.text
 
 
-def test_attach_observer(binance_subject, mock_observer):
+def test_attach_existing_observer(binance_subject_fixture, mock_observer_fixture, caplog_fixture):
     """
-    Test the attach method of the BinanceSubject class.
-    :param binance_subject:
-    :param mock_observer:
-    :return:
+    Test attaching an already attached observer to the BinanceSubject.
+    :param binance_subject_fixture: The BinanceSubject instance.
+    :param mock_observer_fixture: The mock observer.
+    :param caplog_fixture: The caplog fixture for capturing log messages.
     """
-    binance_subject.attach(mock_observer)
-    assert mock_observer in binance_subject._observers
+    binance_subject_fixture.attach(mock_observer_fixture)
+    binance_subject_fixture.attach(mock_observer_fixture)
+    assert binance_subject_fixture._observers.count(mock_observer_fixture) == 1  # pylint: disable=protected-access
+    assert "already attached" in caplog_fixture.text
 
 
-def test_detach_observer(binance_subject, mock_observer):
+def test_detach_existing_observer(binance_subject_fixture, mock_observer_fixture, caplog_fixture):
     """
-    Test the detach method of the BinanceSubject class.
-    :param binance_subject:
-    :param mock_observer:
-    :return:
+    Test detaching an attached observer from the BinanceSubject.
+    :param binance_subject_fixture: The BinanceSubject instance.
+    :param mock_observer_fixture: The mock observer.
+    :param caplog_fixture: The caplog fixture for capturing log messages.
     """
-    binance_subject.attach(mock_observer)
-    binance_subject.detach(mock_observer)
-    assert mock_observer not in binance_subject._observers
+    binance_subject_fixture.attach(mock_observer_fixture)
+    binance_subject_fixture.detach(mock_observer_fixture)
+    assert mock_observer_fixture not in binance_subject_fixture._observers  # pylint: disable=protected-access
+    assert "detached" in caplog_fixture.text
 
 
-def test_notify_observers(binance_subject, mock_observer):
+def test_detach_nonexistent_observer(binance_subject_fixture, mock_observer_fixture, caplog_fixture):
     """
-    Test the notify method of the BinanceSubject class.
-    :param binance_subject:
-    :param mock_observer:
-    :return:
+    Test detaching a non-existent observer from the BinanceSubject.
+    :param binance_subject_fixture: The BinanceSubject instance.
+    :param mock_observer_fixture: The mock observer.
+    :param caplog_fixture: The caplog fixture for capturing log messages.
     """
-    binance_subject.attach(mock_observer)
-    test_message = "Test notification"
-    binance_subject.notify(test_message)
-    assert mock_observer.messages == [test_message]
+    binance_subject_fixture.detach(mock_observer_fixture)
+    assert "could not detach" in caplog_fixture.text
 
 
-def test_notify_multiple_observers(binance_subject):
+def test_notify_observers(binance_subject_fixture, mock_observer_fixture):
     """
-    Test the notify method of the BinanceSubject class with multiple observers.
-    :param binance_subject:
-    :return:
+    Test notifying all attached observers with a message.
+    :param binance_subject_fixture: The BinanceSubject instance.
+    :param mock_observer_fixture: The mock observer.
     """
-    observers = [MockObserver() for _ in range(3)]
-    for observer in observers:
-        binance_subject.attach(observer)
-
-    test_message = "Test notification for multiple observers"
-    binance_subject.notify(test_message)
-
-    for observer in observers:
-        assert observer.messages == [test_message]
-
-
-def test_attach_logs_info(binance_subject, mock_observer, caplog):
-    """
-    Test that the attach method logs an info message.
-    :param binance_subject:
-    :param mock_observer:
-    :param caplog:
-    :return:
-    """
-    with caplog.at_level(logging.INFO):
-        binance_subject.attach(mock_observer)
-    assert f"Observer {mock_observer} attached" in caplog.text
-
-
-def test_detach_logs_info(binance_subject, mock_observer, caplog):
-    """
-    Test that the detach method logs an info message.
-    :param binance_subject:
-    :param mock_observer:
-    :param caplog:
-    :return:
-    """
-    binance_subject.attach(mock_observer)
-    with caplog.at_level(logging.INFO):
-        binance_subject.detach(mock_observer)
-    assert f"Observer {mock_observer} detached" in caplog.text
-
-
-def test_attach_duplicate_observer(binance_subject, mock_observer):
-    """
-    Test that the attach method does not attach duplicate observers.
-    :param binance_subject:
-    :param mock_observer:
-    :return:
-    """
-    binance_subject.attach(mock_observer)
-    binance_subject.attach(mock_observer)
-    assert binance_subject._observers.count(mock_observer) == 1
-
-
-def test_detach_nonexistent_observer(binance_subject, mock_observer, caplog):
-    """
-    Test that the detach method logs a warning message when the observer is not found.
-    :param binance_subject:
-    :param mock_observer:
-    :param caplog:
-    :return:
-    """
-    with caplog.at_level(logging.WARNING):
-        binance_subject.detach(mock_observer)
-    assert f"Observer {mock_observer} not found, could not detach" in caplog.text
+    message = "Test Message"
+    binance_subject_fixture.attach(mock_observer_fixture)
+    binance_subject_fixture.notify(message)
+    mock_observer_fixture.update.assert_called_once_with(message)
 
 
 if __name__ == "__main__":

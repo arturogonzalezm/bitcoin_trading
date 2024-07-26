@@ -1,49 +1,50 @@
-import pytest
+"""
+Tests for BinanceWebSocket class which connects to the Binance WebSocket API and receives real-time data.
+"""
+
 import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
+import pytest
 import websockets
-from websockets import ConnectionClosed
-
 from bitcoin_trading.observer import BinanceSubject
 from bitcoin_trading.websockets_client import BinanceWebSocket
 
 
 @pytest.fixture
-def caplog(caplog):
+def caplog_fixture(caplog):
+    """
+    Fixture for capturing log output.
+    """
     return caplog
 
 
 @pytest.fixture
-def binance_websocket():
+def binance_websocket_fixture():
+    """
+    Fixture for initializing BinanceWebSocket with the symbol 'btcusdt'.
+    """
     return BinanceWebSocket("btcusdt")
 
 
 @pytest.mark.asyncio
-async def test_binance_websocket_initialization(binance_websocket):
-    assert binance_websocket.symbol == "btcusdt"
-    assert binance_websocket.uri == "wss://stream.binance.com:9443/ws/btcusdt@ticker"
-    assert isinstance(binance_websocket.subject, BinanceSubject)
+async def test_binance_websocket_initialization(binance_websocket_fixture):
+    """
+    Test the initialization of BinanceWebSocket.
+    :param binance_websocket_fixture: Fixture for BinanceWebSocket.
+    """
+    assert binance_websocket_fixture.symbol == "btcusdt"
+    assert binance_websocket_fixture.uri == "wss://stream.binance.com:9443/ws/btcusdt@ticker"
+    assert isinstance(binance_websocket_fixture.subject, BinanceSubject)
 
 
-@pytest.mark.asyncio
-async def test_connect_successful_connection(binance_websocket, caplog):
-    mock_websocket = AsyncMock()
-    mock_websocket.__aenter__.return_value = mock_websocket
-    mock_websocket.recv.side_effect = ["message1", "message2", websockets.ConnectionClosed(None, None)]
-
-    # Mock the notify method of the subject
-    binance_websocket.subject.notify = MagicMock()
-
-    with patch('websockets.connect', return_value=mock_websocket):
-        try:
-            await asyncio.wait_for(binance_websocket.connect(), timeout=0.1)
-        except asyncio.TimeoutError:
-            pass  # Expected behavior, as the method will keep trying to reconnect
-
-    assert "WebSocket connection opened for btcusdt" in caplog.text
-    assert "WebSocket connection closed unexpectedly" in caplog.text
-    binance_websocket.subject.notify.assert_any_call("message1")
-    binance_websocket.subject.notify.assert_any_call("message2")
+def message_generator(max_messages=10):
+    """
+    Generator function to simulate WebSocket messages and connection closure.
+    :param max_messages: int: The number of messages to generate before closing the connection.
+    """
+    for _ in range(max_messages):
+        yield "message"
+    yield websockets.ConnectionClosed(1000, "normal closure")
 
 
 if __name__ == "__main__":

@@ -74,9 +74,9 @@ class BinanceSubject(Subject):
         """
         if observer not in self._observers:
             self._observers.append(observer)
-            logger.info(f"Observer {observer} attached")
+            logger.info("Observer %s attached", observer)
         else:
-            logger.info(f"Observer {observer} already attached")
+            logger.info("Observer %s already attached", observer)
 
     def detach(self, observer):
         """
@@ -86,9 +86,9 @@ class BinanceSubject(Subject):
         """
         if observer in self._observers:
             self._observers.remove(observer)
-            logger.info(f"Observer {observer} detached")
+            logger.info("Observer %s detached", observer)
         else:
-            logger.warning(f"Observer {observer} not found, could not detach")
+            logger.warning("Observer %s not found, could not detach", observer)
 
     def notify(self, message):
         """
